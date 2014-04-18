@@ -143,10 +143,6 @@ public class TestServer {
 		
 		//receive the first half from server
 		String first = (String)obIn.readObject();
-		
-		//Send the second half
-		obOut.writeObject(encryptedSecond);
-		obOut.flush();
 
 		//Receive message from servers
 		String second = (String)obIn.readObject();
@@ -166,6 +162,10 @@ public class TestServer {
 		String finalDeco = new String(newPlainTextFirst, "UTF8") + new String(newPlainTextSec, "UTF8");
 		if (finalDeco.contains(serverText)) {
 			verificationSucceed();
+			
+			//Send the second half
+			obOut.writeObject(encryptedSecond);
+			obOut.flush();
 		} else {
 			verificationFail();
 		}

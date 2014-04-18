@@ -59,11 +59,11 @@ public class TestClient {
 		
 		
 		try {
-			//Send nonce to client
+			//Send nonce to server
 			obOut.writeObject(new String(nonce));
 			obOut.flush();
 			
-			//Receive nonce from client
+			//Receive nonce from server
 			String nonceString= (String)obIn.readObject();
 			serverNonce = nonceString.getBytes();
 			
