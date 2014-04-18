@@ -22,8 +22,6 @@ import javax.crypto.Cipher;
 
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
-//convert data type of public key
-//Base64 encoding
 
 public class TestServer {
 
