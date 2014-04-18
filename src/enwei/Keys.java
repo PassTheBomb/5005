@@ -35,21 +35,18 @@ public class Keys {
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.println("RSAKeyGen setup error");
-			System.exit(0);
 		}
 		try {
 			DESkeyGen = KeyGenerator.getInstance("DES");
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 			System.err.println("DESKeyGen setup error.");
-			System.exit(0);
 		}
 		try {
 			kf = KeyFactory.getInstance("RSA");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.println("Unable to setup Key Factory");
-			System.exit(0);
 		}
 	}
 
