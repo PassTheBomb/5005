@@ -3,8 +3,6 @@ package enwei;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.security.Key;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -23,15 +21,15 @@ public class ServerAuthentication {
 
 	}
 
-	public Key T3(InputStream in, OutputStream out) {
+	public void T3(InputStream in, OutputStream out) {
 
 	}
 
-	public Key T4(InputStream in, OutputStream out) {
+	public void T4(InputStream in, OutputStream out) {
 		
 	}
 	
-	public Key T5(InputStream in, OutputStream out){
+	public void T5(InputStream in, OutputStream out){
 
 		// Send RSA pubkey to client
 		byte[] byteArray = k.getRSAPubKey().getEncoded();
@@ -45,7 +43,7 @@ public class ServerAuthentication {
 		}
 
 		// Acquire RSA pubkey from client
-		PublicKey clientPubKey;
+		PublicKey clientPubKey = null;
 		try {
 			byteArray = MsgHandler.acquireNetworkMsg(in);
 		} catch (IOException e) {
@@ -63,8 +61,52 @@ public class ServerAuthentication {
 		// -Base Condition Established, P and G owns each other's RSA a priori-
 		// --------------------------------------------------------------------
 		
-		//Encrypt nonce using server private key
+		// Encrypt symmetric key using client public key
+		byte[] keyCipher = s.encrypt(k.getDESKey().getEncoded(), clientPubKey, "RSA");
+		
+		// Send encrypted symmetric key to client
+		try {
+			out.write(MsgHandler.createNetworkMsg(keyCipher));
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send doubly encrypted nonce.");
+			e.printStackTrace();
+		}
+		
+		// Encrypt nonce using server private key
 		byte[] nonce = new byte[4];
 		random.nextBytes(nonce);
+		byte[] nonceCipher = s.encrypt(nonce, k.getRSAPrivKey(), "RSA");
+		
+		// Double encrypt nonce using symmetric key
+		nonceCipher = s.encrypt(nonceCipher, k.getDESKey(), "DES");
+		
+		//Send doubly encrypted nonce to client
+		try {
+			out.write(MsgHandler.createNetworkMsg(nonceCipher));
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send doubly encrypted nonce.");
+			e.printStackTrace();
+		}
+		
+		// Acquire reply from client
+		try {
+			byteArray = MsgHandler.acquireNetworkMsg(in);
+		} catch (IOException e) {
+			System.err.println("Unable to acquire client reply.");
+			e.printStackTrace();
+		}
+		
+		// Decrypt reply
+		byteArray = s.decrypt(byteArray, k.getDESKey(), "DES");
+		
+		if (byteArray.equals(nonce)){
+			System.out.println("Verified");
+		}
+		else{
+			System.err.println("Unverified");
+			System.exit(0);
+		}
 	}
 }
