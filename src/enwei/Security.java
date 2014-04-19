@@ -2,6 +2,8 @@ package enwei;
 
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Cipher;
 
@@ -13,6 +15,7 @@ import javax.crypto.Cipher;
 public class Security {
 	private Cipher RSAcipher;
 	private Cipher DEScipher;
+	private MessageDigest messageDigest;
 
 	/**
 	 * Instantiates the Security class with the RSA and DES ciphers
@@ -30,6 +33,13 @@ public class Security {
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.err.println("DES Cipher setup error");
+			System.exit(0);
+		}
+		try {
+			messageDigest = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			System.err.println("MD5 message digest setup error");
+			e.printStackTrace();
 			System.exit(0);
 		}
 
@@ -133,5 +143,16 @@ public class Security {
 			throw new IllegalArgumentException();
 		}
 		return plaintext;
+	}
+
+	/**
+	 * Creates a MD5 digest of the input byte-code
+	 * 
+	 * @param byteArrayInput
+	 *            input byte-code to apply the MD5 digest on
+	 * @return the byte-code format MD5 digest of the input byte-code
+	 */
+	public byte[] MD5Digest(byte[] byteArrayInput) {
+		return messageDigest.digest(byteArrayInput);
 	}
 }
