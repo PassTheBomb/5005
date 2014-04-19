@@ -7,9 +7,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.security.InvalidKeyException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 
 /**
  * Class containing the set of 4 protocols to be implemented
@@ -36,22 +39,24 @@ public class ServerAuthentication {
 		OutputStream out = client.getOutputStream();
 
 		ServerAuthentication sa = new ServerAuthentication(s, k);
-		System.out.println(sa.T2(in, out));
-		
-		System.out.println(sa.T3(in, out));
-		System.out.println((new String(s.decrypt(
-				MsgHandler.acquireNetworkMsg(in), k.getDESKey(), "DES"),
-				"UTF-8")).contentEquals("testing1"));
-		
-		System.out.println(sa.T4(in, out));
-		System.out.println((new String(s.decrypt(
-				MsgHandler.acquireNetworkMsg(in), k.getDESKey(), "DES"),
-				"UTF-8")).contentEquals("testing2"));
+		/*
+		 * System.out.println(sa.T2(in, out));
+		 * 
+		 * System.out.println(sa.T3(in, out)); System.out.println((new
+		 * String(s.decrypt( MsgHandler.acquireNetworkMsg(in), k.getDESKey(),
+		 * "DES"), "UTF-8")).contentEquals("testing1"));
+		 * 
+		 * System.out.println(sa.T4(in, out)); System.out.println((new
+		 * String(s.decrypt( MsgHandler.acquireNetworkMsg(in), k.getDESKey(),
+		 * "DES"), "UTF-8")).contentEquals("testing2"));
+		 * 
+		 * System.out.println(sa.T5(in, out)); System.out.println((new
+		 * String(s.decrypt( MsgHandler.acquireNetworkMsg(in), k.getDESKey(),
+		 * "DES"), "UTF-8")).contentEquals("testing3"));
+		 */
 
 		System.out.println(sa.T5(in, out));
-		System.out.println((new String(s.decrypt(
-				MsgHandler.acquireNetworkMsg(in), k.getDESKey(), "DES"),
-				"UTF-8")).contentEquals("testing3"));
+
 		ssock.close();
 	}
 
@@ -83,6 +88,28 @@ public class ServerAuthentication {
 	 * @return true if authentication success
 	 */
 	public boolean T2(InputStream in, OutputStream out) {
+		// Verify Protocol
+		byte[] protocol = ByteBuffer.allocate(4).putInt(1).array();
+		try {
+			out.write(protocol);
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send protocol confirmation.");
+			e.printStackTrace();
+			return false;
+		}
+		byte[] verifyProtocol = new byte[4];
+		try {
+			in.read(verifyProtocol);
+		} catch (IOException e2) {
+			System.err.println("Unable to receive protocol confirmation.");
+			e2.printStackTrace();
+		}
+		if (ByteBuffer.wrap(verifyProtocol).getInt() != 1) {
+			System.err.println("Protocol mismatch.");
+			return false;
+		}
+
 		// Send server RSA public key and server Nonce to client
 		byte[] clientNonce = new byte[4];
 		byte[] serverNonce = new byte[4];
@@ -113,7 +140,7 @@ public class ServerAuthentication {
 		}
 		try {
 			clientPubKey = k.PublicKeyFromByteCode(byteArray);
-		} catch (InvalidKeySpecException e) {
+		} catch (Exception e) {
 			System.err.println("Unable to decode client public key.");
 			e.printStackTrace();
 			return false;
@@ -125,7 +152,25 @@ public class ServerAuthentication {
 				+ clientNonce.length);
 		byteBuffer.put(byteArray);
 		byteBuffer.put(clientNonce);
-		byteArray = s.encrypt(byteBuffer.array(), clientPubKey, "RSA");
+		try {
+			byteArray = s.encrypt(byteBuffer.array(), clientPubKey, "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 		byteBuffer.clear();
 
 		// Split encrypted server password + client nonce
@@ -177,7 +222,25 @@ public class ServerAuthentication {
 		byteBuffer.clear();
 
 		// Decrypt client ciphertext using server RSA private key
-		byteArray = s.decrypt(byteArray, k.getRSAPrivKey(), "RSA");
+		try {
+			byteArray = s.decrypt(byteArray, k.getRSAPrivKey(), "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Verify client password and server nonce
 		byteBuffer = ByteBuffer.wrap(byteArray);
@@ -223,6 +286,27 @@ public class ServerAuthentication {
 	 * @return true if authentication success
 	 */
 	public boolean T3(InputStream in, OutputStream out) {
+		// Verify Protocol
+		byte[] protocol = ByteBuffer.allocate(4).putInt(2).array();
+		try {
+			out.write(protocol);
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send protocol confirmation.");
+			e.printStackTrace();
+			return false;
+		}
+		byte[] verifyProtocol = new byte[4];
+		try {
+			in.read(verifyProtocol);
+		} catch (IOException e2) {
+			System.err.println("Unable to receive protocol confirmation.");
+			e2.printStackTrace();
+		}
+		if (ByteBuffer.wrap(verifyProtocol).getInt() != 2) {
+			System.err.println("Protocol mismatch.");
+			return false;
+		}
 		// Send server RSA public key and server Nonce to client
 		byte[] clientNonce = new byte[4];
 		byte[] serverNonce = new byte[4];
@@ -253,7 +337,7 @@ public class ServerAuthentication {
 		}
 		try {
 			clientPubKey = k.PublicKeyFromByteCode(byteArray);
-		} catch (InvalidKeySpecException e) {
+		} catch (Exception e) {
 			System.err.println("Unable to decode client public key.");
 			e.printStackTrace();
 			return false;
@@ -269,7 +353,25 @@ public class ServerAuthentication {
 		byteBuffer.put(k.getDESKey().getEncoded());
 		byteBuffer.put(byteArray);
 		byteBuffer.put(clientNonce);
-		byteArray = s.encrypt(byteBuffer.array(), clientPubKey, "RSA");
+		try {
+			byteArray = s.encrypt(byteBuffer.array(), clientPubKey, "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 		byteBuffer.clear();
 
 		// Split encrypted server password + client nonce
@@ -321,7 +423,25 @@ public class ServerAuthentication {
 		byteBuffer.clear();
 
 		// Decrypt client ciphertext using server RSA private key
-		byteArray = s.decrypt(byteArray, k.getRSAPrivKey(), "RSA");
+		try {
+			byteArray = s.decrypt(byteArray, k.getRSAPrivKey(), "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Verify client password and server nonce
 		byteBuffer = ByteBuffer.wrap(byteArray);
@@ -368,6 +488,27 @@ public class ServerAuthentication {
 	 * @return true if authentication success
 	 */
 	public boolean T4(InputStream in, OutputStream out) {
+		// Verify Protocol
+		byte[] protocol = ByteBuffer.allocate(4).putInt(3).array();
+		try {
+			out.write(protocol);
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send protocol confirmation.");
+			e.printStackTrace();
+			return false;
+		}
+		byte[] verifyProtocol = new byte[4];
+		try {
+			in.read(verifyProtocol);
+		} catch (IOException e2) {
+			System.err.println("Unable to receive protocol confirmation.");
+			e2.printStackTrace();
+		}
+		if (ByteBuffer.wrap(verifyProtocol).getInt() != 3) {
+			System.err.println("Protocol mismatch.");
+			return false;
+		}
 		// Send server RSA public key and server Nonce to client
 		byte[] clientNonce = new byte[4];
 		byte[] serverNonce = new byte[4];
@@ -398,7 +539,7 @@ public class ServerAuthentication {
 		}
 		try {
 			clientPubKey = k.PublicKeyFromByteCode(byteArray);
-		} catch (InvalidKeySpecException e) {
+		} catch (Exception e) {
 			System.err.println("Unable to decode client public key.");
 			e.printStackTrace();
 			return false;
@@ -414,8 +555,27 @@ public class ServerAuthentication {
 		byteBuffer.put(k.getDESKey().getEncoded());
 		byteBuffer.put(byteArray);
 		byteBuffer.put(clientNonce);
-		byte[] serverCiphertext = s.encrypt(byteBuffer.array(), clientPubKey,
-				"RSA");
+		byte[] serverCiphertext;
+		try {
+			serverCiphertext = s.encrypt(byteBuffer.array(), clientPubKey,
+					"RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 		byteBuffer.clear();
 
 		// Create server MD5 digest using MD5 digest function
@@ -470,7 +630,25 @@ public class ServerAuthentication {
 		}
 
 		// Decrypt client ciphertext using server RSA private key
-		byteArray = s.decrypt(clientCiphertext, k.getRSAPrivKey(), "RSA");
+		try {
+			byteArray = s.decrypt(clientCiphertext, k.getRSAPrivKey(), "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Verify client password and server nonce
 		byteBuffer = ByteBuffer.wrap(byteArray);
@@ -515,6 +693,27 @@ public class ServerAuthentication {
 	 * @return true if authentication success
 	 */
 	public boolean T5(InputStream in, OutputStream out) {
+		// Verify Protocol
+		byte[] protocol = ByteBuffer.allocate(4).putInt(4).array();
+		try {
+			out.write(protocol);
+			out.flush();
+		} catch (IOException e) {
+			System.err.println("Unable to send protocol confirmation.");
+			e.printStackTrace();
+			return false;
+		}
+		byte[] verifyProtocol = new byte[4];
+		try {
+			in.read(verifyProtocol);
+		} catch (IOException e2) {
+			System.err.println("Unable to receive protocol confirmation.");
+			e2.printStackTrace();
+		}
+		if (ByteBuffer.wrap(verifyProtocol).getInt() != 4) {
+			System.err.println("Protocol mismatch.");
+			return false;
+		}
 
 		// Send RSA pubkey to client
 		byte[] byteArray = k.getRSAPubKey().getEncoded();
@@ -539,7 +738,7 @@ public class ServerAuthentication {
 		}
 		try {
 			clientPubKey = k.PublicKeyFromByteCode(byteArray);
-		} catch (InvalidKeySpecException e) {
+		} catch (Exception e) {
 			System.err.println("Unable to decode client public key.");
 			e.printStackTrace();
 			return false;
@@ -550,8 +749,27 @@ public class ServerAuthentication {
 		// --------------------------------------------------------------------
 
 		// Encrypt symmetric key using client public key
-		byte[] keyCipher = s.encrypt(k.getDESKey().getEncoded(), clientPubKey,
-				"RSA");
+		byte[] keyCipher;
+		try {
+			keyCipher = s.encrypt(k.getDESKey().getEncoded(), clientPubKey,
+					"RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Send encrypted symmetric key to client
 		try {
@@ -566,10 +784,47 @@ public class ServerAuthentication {
 		// Encrypt nonce using server private key
 		byte[] nonce = new byte[4];
 		random.nextBytes(nonce);
-		byte[] nonceCipher = s.encrypt(nonce, k.getRSAPrivKey(), "RSA");
+		byte[] nonceCipher;
+		try {
+			nonceCipher = s.encrypt(nonce, k.getRSAPrivKey(), "RSA");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Double encrypt nonce using symmetric key
-		nonceCipher = s.encrypt(nonceCipher, k.getDESKey(), "DES");
+		try {
+			nonceCipher = s.encrypt(nonceCipher, k.getDESKey(), "DES");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Send doubly encrypted nonce to client
 		try {
@@ -591,14 +846,50 @@ public class ServerAuthentication {
 		}
 
 		// Decrypt reply
-		byteArray = s.decrypt(byteArray, k.getDESKey(), "DES");
+		try {
+			byteArray = s.decrypt(byteArray, k.getDESKey(), "DES");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 		if (!(ByteBuffer.wrap(byteArray).getInt() == ByteBuffer.wrap(nonce)
 				.getInt())) {
 			return false;
 		}
 
 		// Encrypt verification status using symmetric key
-		byteArray = s.encrypt("Verified".getBytes(), k.getDESKey(), "DES");
+		try {
+			byteArray = s.encrypt("Verified".getBytes(), k.getDESKey(), "DES");
+		} catch (InvalidKeyException e1) {
+			System.err.println("Wrong key used.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalArgumentException e1) {
+			System.err.println("Wrong format specified.");
+			e1.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e1) {
+			System.err.println("Plaintext is too long.");
+			e1.printStackTrace();
+			return false;
+		} catch (BadPaddingException e1) {
+			System.err.println("Wrong padding used.");
+			e1.printStackTrace();
+			return false;
+		}
 
 		// Send verification status
 		byteArray = MsgHandler.createNetworkMsg(byteArray);

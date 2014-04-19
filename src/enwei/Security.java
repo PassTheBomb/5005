@@ -5,7 +5,9 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 
 /**
  * A class containing RSA and DES ciphers, and methods that uses these ciphers
@@ -59,36 +61,24 @@ public class Security {
 	 * @return
 	 * @throws IllegalArgumentException
 	 *             if the format input is not "RSA" or "DES"
+	 * @throws InvalidKeyException
+	 *             if the key provided is invalid for the input format
+	 * @throws BadPaddingException
+	 *             if wrong padding is used
+	 * @throws IllegalBlockSizeException
+	 *             if data + padding is longer than the available block size for
+	 *             encryption
 	 */
 	public byte[] encrypt(byte[] plaintext, Key k, String format)
-			throws IllegalArgumentException {
+			throws IllegalArgumentException, InvalidKeyException,
+			IllegalBlockSizeException, BadPaddingException {
 		byte[] ciphertext = null;
 		if (format == "RSA") {
-			try {
-				RSAcipher.init(Cipher.ENCRYPT_MODE, k);
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-				System.err.println("RSA key invalid.");
-			}
-			try {
-				ciphertext = RSAcipher.doFinal(plaintext);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.err.println("Unable to encrypt.");
-			}
+			RSAcipher.init(Cipher.ENCRYPT_MODE, k);
+			ciphertext = RSAcipher.doFinal(plaintext);
 		} else if (format == "DES") {
-			try {
-				DEScipher.init(Cipher.ENCRYPT_MODE, k);
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-				System.err.println("DES key invalid.");
-			}
-			try {
-				ciphertext = DEScipher.doFinal(plaintext);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.err.println("Unable to encrypt.");
-			}
+			DEScipher.init(Cipher.ENCRYPT_MODE, k);
+			ciphertext = DEScipher.doFinal(plaintext);
 		} else {
 			throw new IllegalArgumentException();
 		}
@@ -109,36 +99,24 @@ public class Security {
 	 * @return
 	 * @throws IllegalArgumentException
 	 *             if the format input is not "RSA" or "DES"
+	 * @throws InvalidKeyException
+	 *             if the key provided is invalid for the input format
+	 * @throws BadPaddingException
+	 *             if wrong padding is used
+	 * @throws IllegalBlockSizeException
+	 *             if data + padding is longer than the available block size for
+	 *             encryption
 	 */
 	public byte[] decrypt(byte[] ciphertext, Key k, String format)
-			throws IllegalArgumentException {
+			throws IllegalArgumentException, InvalidKeyException,
+			IllegalBlockSizeException, BadPaddingException {
 		byte[] plaintext = null;
 		if (format == "RSA") {
-			try {
-				RSAcipher.init(Cipher.DECRYPT_MODE, k);
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-				System.err.println("RSA key invalid.");
-			}
-			try {
-				plaintext = RSAcipher.doFinal(ciphertext);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.err.println("Unable to decrypt.");
-			}
+			RSAcipher.init(Cipher.DECRYPT_MODE, k);
+			plaintext = RSAcipher.doFinal(ciphertext);
 		} else if (format == "DES") {
-			try {
-				DEScipher.init(Cipher.DECRYPT_MODE, k);
-			} catch (InvalidKeyException e) {
-				e.printStackTrace();
-				System.err.println("DES key invalid.");
-			}
-			try {
-				plaintext = DEScipher.doFinal(ciphertext);
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.err.println("Unable to decrypt.");
-			}
+			DEScipher.init(Cipher.DECRYPT_MODE, k);
+			plaintext = DEScipher.doFinal(ciphertext);
 		} else {
 			throw new IllegalArgumentException();
 		}

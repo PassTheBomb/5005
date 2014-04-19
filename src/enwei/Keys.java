@@ -123,7 +123,7 @@ public class Keys {
 	 *             if the byte encoded key is not valid
 	 */
 	public PublicKey PublicKeyFromByteCode(byte[] encodedKey)
-			throws InvalidKeySpecException {
+			throws Exception {
 		ks = new X509EncodedKeySpec(encodedKey);
 		return kf.generatePublic(ks);
 	}
@@ -135,7 +135,8 @@ public class Keys {
 	 *            the byte encoded key
 	 * @return a DES key
 	 */
-	public Key DESKeyFromByteCode(byte[] encodedKey) {
-		return new SecretKeySpec(encodedKey, 0, encodedKey.length, "DES");
+	public Key DESKeyFromByteCode(byte[] encodedKey) throws Exception {
+		Key DESkey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "DES");
+		return DESkey;
 	}
 }
